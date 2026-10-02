@@ -1,0 +1,33 @@
+/* Outings: create, plan, invite, RSVP, live, end. V6: local demo repository. V7: Supabase
+   (tables outings, outing_members, outing_stops; RPCs for start/advance/end). */
+import * as R from '@/data/demo/repository';
+export const outingService = {
+  get: R.outing,
+  stops: R.stopsOf,
+  members: R.attendeesOf,
+  going: R.going,
+  myMembership: R.myAttendance,
+  isOrganiser: R.isOrganiser,
+  placeOf: R.placeOf,
+  eventOf: R.eventOf,
+  stopName: R.stopName,
+  mine: R.myOutings,
+  publicOutings: R.publicOutings,
+  tonight: R.tonightOutings,
+  myLive: R.myLiveOuting,
+  create: R.createOuting,
+  update: R.updateOuting,
+  remove: R.deleteOuting,
+  addStop: R.addStop,
+  addEventStop: R.addEventStop,
+  removeStop: R.removeStop,
+  reorderStops: R.reorderStops,
+  setStopTime: R.setStopTime,
+  rsvp: R.rsvp,
+  invite: R.invite,
+  start: R.startOuting,
+  advance: R.advance,
+  end: R.endOuting,
+  duplicate: R.duplicate,
+  inviteUrl: (o: { inviteCode: string }) => `https://hop.app/i/${o.inviteCode}`,
+};

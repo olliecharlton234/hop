@@ -1,0 +1,79 @@
+{
+  "expo": {
+    "name": "HOP",
+    "slug": "hop",
+    "scheme": "hop",
+    "version": "0.6.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0d0e11",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.hop.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "HOP uses your location to show you on the map, what's near you, and to check you're at a venue before you send a crowd report."
+      }
+    },
+    "android": {
+      "package": "app.hop.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#0d0e11",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0d0e11",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 120
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "HOP uses the camera so you can take photos for your outing's shared album.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "HOP lets you add photos from your library to your outing's album."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "HOP uses your location to show you on the map, what's near you, and to check you're at a venue before you send a crowd report."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "HOP can save the photos you take to your camera roll.",
+          "savePhotosPermission": "HOP can save the photos you take to your camera roll.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
