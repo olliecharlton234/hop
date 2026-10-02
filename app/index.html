@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0E0F12">
+<title>HOP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Instrument+Sans:wght@400..700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+  <div id="map" aria-label="Map"></div>
+  <header id="top" class="top"></header>
+  <section id="sheet" class="sheet" data-size="mini" aria-live="polite">
+    <div class="grab" data-drag><span></span></div>
+    <div id="sheetBody" class="sheet-body"></div>
+  </section>
+  <nav id="nav" class="nav" aria-label="Main"></nav>
+  <div id="layers"></div>
+  <div id="modal"></div>
+  <div id="banners" aria-live="polite"></div>
+  <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+  <input type="file" id="rollIn" accept="image/*" multiple hidden>
+  <input type="file" id="coverIn" accept="image/*" hidden>
+</div>
+<script src="vendor/leaflet.js"></script>
+<script src="js/util.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/events.js"></script>
+<script src="js/store.js"></script>
+<script src="js/activity.js"></script>
+<script src="js/map.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/screens-home.js"></script>
+<script src="js/screens-events.js"></script>
+<script src="js/screens-outing.js"></script>
+<script src="js/screens-live.js"></script>
+<script src="js/screens-memories.js"></script>
+<script src="js/screens-chat.js"></script>
+<script src="js/screens-tonight.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
