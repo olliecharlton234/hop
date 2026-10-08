@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "HOP",
+  "short_name": "HOP",
+  "description": "See where the city is alive, plan nights with friends, and keep the night as a shared memory.",
+  "start_url": "/?source=homescreen",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0e11",
+  "theme_color": "#0d0e11",
+  "categories": ["social", "lifestyle", "navigation"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

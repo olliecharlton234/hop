@@ -1,6 +1,6 @@
 {
   "name": "hop-mobile",
-  "version": "1.0.0",
+  "version": "0.6.1",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/archivo": "^0.4.2",
@@ -51,7 +51,11 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "export:web": "expo export --platform web"
+    "build:web": "expo export --platform web --clear && node scripts/web-postbuild.mjs",
+    "serve:web": "node scripts/serve-dist.mjs"
   },
-  "private": true
+  "private": true,
+  "engines": {
+    "node": ">=20.19.4"
+  }
 }
