@@ -1,6 +1,7 @@
 /* Event sheet: when, where, price, who's interested, who's there now.
    Add to outing (primary) · View · Save · Share · Plan a night around this. */
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
+import { analytics } from '@/services/analytics';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { C, F } from '@/theme';
 import { Photo } from '@/components/ui/Photo';
@@ -24,6 +25,7 @@ import { dayDate, eventWhen, hm, plural, startsIn, timeShort } from '@/utils/for
 import { now } from '@/utils/clock';
 
 export const EventDetails = memo(function EventDetails({ id, onScrollToDetail }: { id: string; onScrollToDetail?: () => void }) {
+  useEffect(() => { analytics.track('event_opened', { event: id }); }, [id]);
   const d = useHop(() => {
     const e = eventService.byId(id)!;
     const p = eventService.placeOf(e)!;

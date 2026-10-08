@@ -18,6 +18,7 @@ import { AreaDetails } from '@/components/discovery/AreaDetails';
 import { VenueDetails } from '@/components/venues/VenueDetails';
 import { EventDetails } from '@/components/events/EventDetails';
 import { FloatButton } from '@/components/ui/Button';
+import { InstallTip } from '@/components/onboarding/InstallTip';
 import { Icon } from '@/components/ui/Icon';
 import { panel, setUi, useUi, getUi } from '@/store/uiStore';
 import { useHop, deepEqual } from '@/store/hopStore';
@@ -49,9 +50,10 @@ export default function MapHome() {
 
   // deep links (hop://events/ev_x → event sheet on the map)
   useEffect(() => {
-    if (params.event) panel.push({ kind: 'event', id: params.event });
-    else if (params.venue) panel.push({ kind: 'venue', id: params.venue });
-    else if (params.area) panel.push({ kind: 'area', id: params.area });
+    if (params.event && eventService.byId(params.event)) panel.push({ kind: 'event', id: params.event });
+    else if (params.venue && venueService.all().some((v) => v.id === params.venue)) panel.push({ kind: 'venue', id: params.venue });
+    else if (params.area && activityService.areas().some((a) => a.id === params.area)) panel.push({ kind: 'area', id: params.area });
+    else if (params.event || params.venue || params.area) toast('That link has expired');
   }, [params.event, params.venue, params.area]);
 
   useFocusEffect(useCallback(() => {
@@ -145,6 +147,8 @@ export default function MapHome() {
         <ActivityToggle />
         <FloatButton testID="locate" label="Show where I am" onPress={locate}><Icon name="locate" /></FloatButton>
       </Animated.View>
+
+      {showTop ? <InstallTip top={insets.top + 10 + topH + 8} /> : null}
 
       <HopSheet ref={sheetRef} snaps={snaps} index={index} height={sheetH} onChange={setSnapIdx} testID="map-sheet" key={top.kind === 'tonight' ? 'tonight' : 'panel'}>
         {content}

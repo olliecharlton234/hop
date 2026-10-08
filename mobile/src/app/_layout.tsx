@@ -5,14 +5,17 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useFonts } from 'expo-font';
-import { Archivo_800ExtraBold, Archivo_900Black } from '@expo-google-fonts/archivo';
-import { InstrumentSans_400Regular, InstrumentSans_500Medium, InstrumentSans_600SemiBold, InstrumentSans_700Bold } from '@expo-google-fonts/instrument-sans';
-import { IBMPlexMono_500Medium, IBMPlexMono_600SemiBold } from '@expo-google-fonts/ibm-plex-mono';
+import { useHopFonts } from '@/theme/fonts';
 import '@/data/demo/repository';
 import '@/data/demo/activityModel';
-import { loadStore, tick } from '@/store/hopStore';
+import { loadStore, onEvent, tick } from '@/store/hopStore';
 import { loadUi } from '@/store/uiStore';
+import { getPrefs, loadPrefs, usePrefs } from '@/store/prefs';
+import { hydrateGuests, getMeId, outing } from '@/data/demo/repository';
+import { analytics, wireStoreAnalytics } from '@/services/analytics';
+import { Onboarding } from '@/components/onboarding/Onboarding';
+import { hideBootScreen, registerServiceWorker } from '@/utils/pwa';
+import { entryIsLink } from '@/utils/entry';
 import { startSimulator } from '@/data/demo/simulator';
 import { ModalHost } from '@/components/ui/ModalSheet';
 import { BannerHost } from '@/components/ui/Banners';
@@ -20,19 +23,33 @@ import { C } from '@/theme';
 import { registerDetails } from '@/components/sheets/DetailModals';
 
 registerDetails();
+registerServiceWorker();
+
+/** Opening a shared link straight onto a screen still keeps the map underneath it, so Back
+    leads into HOP rather than out of it. */
+export const unstable_settings = { initialRouteName: '(tabs)' };
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const [fonts] = useFonts({ Archivo_800ExtraBold, Archivo_900Black, InstrumentSans_400Regular, InstrumentSans_500Medium, InstrumentSans_600SemiBold, InstrumentSans_700Bold, IBMPlexMono_500Medium, IBMPlexMono_600SemiBold });
+  const fonts = useHopFonts();
   const [ready, setReady] = useState(false);
+  const [intro, setIntro] = useState(false);
+  const onboarded = usePrefs((p) => p.onboarded);
   useEffect(() => {
-    Promise.all([loadStore(), loadUi()]).then(() => { setReady(true); startSimulator(); });
+    Promise.all([loadStore(), loadUi(), loadPrefs(), entryIsLink()]).then(([, , , link]) => {
+      hydrateGuests();
+      wireStoreAnalytics(onEvent, getMeId, (id) => outing(id)?.organiserId === getMeId());
+      analytics.track('app_opened', { first: getPrefs().opens === 1, via_link: link });
+      // first open shows the three intro screens, unless they arrived through a shared link
+      setIntro(!getPrefs().onboarded && !link);
+      setReady(true); startSimulator();
+    });
     // keep "4m ago", "Busy now" and the Tonight clock current
     const t = setInterval(() => { if (AppState.currentState === 'active') tick(); }, 30000);
     return () => clearInterval(t);
   }, []);
-  useEffect(() => { if (ready && fonts) SplashScreen.hideAsync().catch(() => {}); }, [ready, fonts]);
+  useEffect(() => { if (ready && fonts) { SplashScreen.hideAsync().catch(() => {}); hideBootScreen(); } }, [ready, fonts]);
   if (!ready || !fonts) return <View style={{ flex: 1, backgroundColor: C.ink }} />;
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: C.ink }}>
@@ -47,6 +64,7 @@ export default function RootLayout() {
         </Stack>
         <ModalHost />
         <BannerHost />
+        {intro && !onboarded ? <Onboarding onDone={() => setIntro(false)} /> : null}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

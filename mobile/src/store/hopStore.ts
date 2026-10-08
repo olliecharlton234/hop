@@ -26,6 +26,8 @@ export interface HopState {
   collections: Record<string, SavedCollection[]>;
   chatPrefs: Record<string, Record<string, ChatPref>>;
   recentSearches: string[];
+  /** people from invite links who aren't in the demo friend list */
+  guests?: import('@/types/models').User[];
 }
 
 const KEY = 'hop.state.v6.native';

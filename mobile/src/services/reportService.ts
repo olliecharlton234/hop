@@ -5,6 +5,7 @@ import { locationService } from './locationService';
 export const reportService = {
   KINDS: R.REPORT_KINDS,
   summary: R.reportsAt,
+  hasDemo: R.hasDemoReports,
   canReport: (venueId: string) => R.canReport(venueId, locationService.current()),
   add: R.addReport,
 };

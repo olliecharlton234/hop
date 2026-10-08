@@ -1,6 +1,7 @@
 /* Live venue card: "PACKED · Activity rising", what's on, who's there, crowd reports,
    tonight's public photos. Actions: Add to outing · Save · Share · Report. */
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
+import { analytics } from '@/services/analytics';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { C, F } from '@/theme';
 import { Photo } from '@/components/ui/Photo';
@@ -32,6 +33,7 @@ import { useLocation } from '@/hooks/useLocation';
 const peakWords = (id: string) => { const [, pk] = venueService.pop(id); const h = Math.round(pk) % 24; return `peaks around ${h % 12 || 12}${h >= 12 && h < 24 ? 'pm' : 'am'}`; };
 
 export const VenueDetails = memo(function VenueDetails({ id, picking, onPicked, onClose }: { id: string; picking?: string | null; onPicked?: () => void; onClose?: () => void }) {
+  useEffect(() => { if (!picking) analytics.track('venue_opened', { venue: id }); }, [id, picking]);
   useLocation();
   const d = useHop(() => {
     const v = venueService.byId(id);
@@ -55,8 +57,8 @@ export const VenueDetails = memo(function VenueDetails({ id, picking, onPicked, 
       lv: act.lv, status: `${act.label.toUpperCase()}${act.trend === 'rising' ? ' · Activity rising' : act.trend === 'easing' ? ' · Easing off' : ''}`,
       onNow: onNow?.title || '', area: area ? { id: area.id, name: area.name, level: areaNow!.level.toLowerCase() } : null,
       live, fr: fr.map((f) => f.user.id), frSince: fr.length ? hm(Math.min(...fr.map((f) => f.since))) : '',
-      rep: ks.length ? { rows: (['crowd', 'queue', 'entry', 'vibe'] as const).filter((k) => rep[k]).map((k) => [k === 'vibe' ? 'Music' : reportService.KINDS[k].label, rep[k]!.label]), n: Math.max(...ks.map((k) => rep[k]!.n)), last: Math.max(...ks.map((k) => rep[k]!.last)) } : null,
-      tonight, tonightAgo: tonight.length ? ago(Math.max(...tonight.map((x) => x.at))) : '', mem,
+      rep: ks.length ? { rows: (['crowd', 'queue', 'entry', 'vibe'] as const).filter((k) => rep[k]).map((k) => [k === 'vibe' ? 'Music' : reportService.KINDS[k].label, rep[k]!.label]), n: Math.max(...ks.map((k) => rep[k]!.n)), last: Math.max(...ks.map((k) => rep[k]!.last)), demo: reportService.hasDemo(id) } : null,
+      tonight, tonightAgo: tonight.length ? ago(Math.max(...tonight.map((x) => x.at))) : '', tonightDemo: venueService.publicPhotos(id).some((x) => (x as any).demo), mem,
       evs: evs.map((e) => e.id), been: [...been],
       saved: savedService.isSaved({ venueId: id }),
       mine: outingService.mine().upcoming.filter((o) => o.organiserId === friendService.meId() && o.status === 'planning').map((o) => ({ id: o.id, title: o.title, has: outingService.stops(o.id).some((s) => s.venueId === id) })),
@@ -91,14 +93,14 @@ export const VenueDetails = memo(function VenueDetails({ id, picking, onPicked, 
       {d.rep ? (
         <View style={st.reports} testID="venue-reports">
           <View style={st.rgrid}>{d.rep.rows.map(([k, v]) => <View key={k} style={{ flex: 1 }}><Text style={st.rk}>{k.toUpperCase()}</Text><Text style={st.rv} numberOfLines={1}>{v}</Text></View>)}</View>
-          <View style={st.rfoot}><Text style={st.rf}>{plural(d.rep.n, 'report')} · Updated {ago(d.rep.last)}</Text>{can.ok ? <LinkButton title="Report" onPress={() => openReport(id)} /> : null}</View>
+          <View style={st.rfoot}><Text style={st.rf}>{plural(d.rep.n, 'report')} · Updated {ago(d.rep.last)}{d.rep.demo ? ' · demo data' : ''}</Text>{can.ok ? <LinkButton title="Report" onPress={() => openReport(id)} /> : null}</View>
         </View>
       ) : (
         <View style={[st.reports, st.rfoot, { marginTop: 12 }]}><Text style={st.rf}>No crowd reports in the last 90 minutes.</Text>{can.ok ? <LinkButton title="Report" onPress={() => openReport(id)} /> : null}</View>
       )}
 
       {d.tonight.length ? (
-        <Section title={`Recent · ${plural(d.tonight.length, 'photo')} tonight`} right={<Text style={st.rf}>{d.tonightAgo}</Text>}>
+        <Section title={`Recent · ${plural(d.tonight.length, 'photo')} tonight`} right={<Text style={st.rf}>{d.tonightAgo}{d.tonightDemo ? ' · demo' : ''}</Text>}>
           <PhotoStrip items={d.tonight.slice(0, 12)} venue={id} />
         </Section>
       ) : d.mem.length ? (

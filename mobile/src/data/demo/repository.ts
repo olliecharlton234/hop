@@ -8,7 +8,7 @@ import { EVENT_CATS } from '@/data/eventCategories';
 import { now } from '@/utils/clock';
 import { metres, distLabel, uid } from '@/utils/format';
 import type {
-  ChatPhase, ChatPref, FriendPresence, HopEvent, LatLng, Message, Outing, OutingIcon, OutingMember, OutingStop, Photo,
+  ChatPhase, ChatPref, FriendPresence, HopEvent, LatLng, Message, Outing, OutingIcon, OutingMember, OutingStatus, OutingStop, Photo,
   Place, PublicPhoto, ReportKind, ReportSummary, Rsvp, SavedCollection, SavedRef, User, Venue, VenueActivity, Visibility,
 } from '@/types/models';
 
@@ -28,6 +28,17 @@ let meId = 'u_ollie';
 export const getMeId = () => meId;
 export function setMe(id: string) { meId = id; commit('me', { id }); }
 export const me = () => userById[meId];
+
+/** People who aren't in the demo friend list (e.g. whoever sent you an invite link).
+    Kept in state so they survive reloads. */
+export function addGuest(u: User) {
+  if (userById[u.id]) return userById[u.id];
+  users.push(u); userById[u.id] = u;
+  const g = (S().guests ||= []);
+  if (!g.some((x) => x.id === u.id)) g.push(u);
+  return u;
+}
+export function hydrateGuests() { (S().guests || []).forEach((u) => { if (!userById[u.id]) { users.push(u); userById[u.id] = u; } }); }
 
 // ---------------------------------------------------------------- events (normalised, pluggable sources)
 function normalize(raw: any, source: { id: string; name: string }): HopEvent {
@@ -246,7 +257,7 @@ export function setSaved(ref: SavedRef, colId: string, on: boolean) {
   const i = c.items.findIndex((x) => refKey(x) === refKey(ref));
   if (on && i < 0) c.items.unshift(ref);
   if (!on && i >= 0) c.items.splice(i, 1);
-  commit('saved', ref);
+  commit('saved', { ...ref, colId, on });
 }
 
 // ---------------------------------------------------------------- crowd reports
@@ -269,6 +280,8 @@ export function reportsAt(venueId: string, t = now()) {
   });
   return out;
 }
+/** Beta disclosure: are any of the recent reports here simulated (i.e. not yours)? */
+export const hasDemoReports = (venueId: string, t = now()) => (S().reports || []).some((r) => r.venueId === venueId && r.userId !== meId && t - r.at < 90 * 6e4 && t >= r.at);
 /** You can only report where you are: near the venue, or at your outing's current stop */
 export function canReport(venueId: string, me: LatLng) {
   const v = venueById[venueId]; if (!v) return { ok: false, why: '' };
@@ -296,6 +309,49 @@ export function createOuting({ title, icon, startsAt, visibility, cover }: { tit
   S().outings.push(o);
   S().attendees.push({ id: uid('a'), outingId: id, userId: meId, rsvp: 'going', role: 'organiser', invitedBy: meId, respondedAt: now(), shareLocation: false });
   commit('outing:create', { id });
+  return o;
+}
+/** Shared plan from an invite link (no backend in V6): the outing as the sender saw it.
+    Times are relative to the sender's clock so they land right on any device. */
+export interface OutingSnapshot {
+  v: 1; id: string; t: string; i: OutingIcon; vis: Visibility; st0: OutingStatus; s: number; cur?: number;
+  host: { id?: string; name: string }; stops: [string, number][]; m: [string, Rsvp][]; code: string;
+}
+export function snapshotOuting(id: string): OutingSnapshot | null {
+  const o = outing(id); if (!o) return null;
+  const t = now();
+  const hostIsMe = o.organiserId === meId;
+  return {
+    v: 1, id: o.id, t: o.title, i: o.icon, vis: o.visibility, st0: o.status, s: Math.round((o.startsAt - t) / 6e4), cur: o.live?.current,
+    host: hostIsMe ? { name: me().name } : { id: o.organiserId, name: userById[o.organiserId]?.name || 'A friend' },
+    stops: stopsOf(id).map((x) => [x.eventId ? `ev:${x.eventId}` : x.venueId || '', Math.round((x.at - o.startsAt) / 6e4)] as [string, number]).filter((x) => x[0]),
+    m: attendeesOf(id).filter((a) => a.userId !== meId && a.userId !== o.organiserId && !a.userId.startsWith('g_')).map((a) => [a.userId, a.rsvp] as [string, Rsvp]).slice(0, 30),
+    code: o.inviteCode,
+  };
+}
+/** Add a shared outing to this device (once). The person who shared it becomes a guest host. */
+export function importOuting(snap: OutingSnapshot): Outing | null {
+  if (outing(snap.id)) return outing(snap.id)!;
+  if (!snap || snap.v !== 1 || !snap.id || !Array.isArray(snap.stops)) return null;
+  const t = now();
+  const hostId = snap.host.id && userById[snap.host.id] && snap.host.id !== meId ? snap.host.id : addGuest({ id: `g_${snap.id}`, name: snap.host.name || 'A friend', first: (snap.host.name || 'A friend').split(' ')[0], handle: '', avatar: null, suburb: '' }).id;
+  const startsAt = Math.round((t + snap.s * 6e4) / 3e5) * 3e5; // plans sit on 5-minute marks; devices' clocks differ by seconds
+  const o: Outing = {
+    id: snap.id, title: String(snap.t || 'Night out').slice(0, 60), icon: snap.i || 'party', cover: null, kind: 'night', visibility: snap.vis === 'public' ? 'public' : 'private',
+    organiserId: hostId, status: snap.st0 === 'ended' ? 'ended' : snap.st0 === 'live' ? 'live' : 'planning', startsAt, createdAt: t, endedAt: snap.st0 === 'ended' ? t : null,
+    live: snap.st0 === 'live' ? { current: snap.cur || 0, startedAt: startsAt, arrivedAt: t } : null, inviteCode: snap.code || snap.id, activity: [],
+  };
+  S().outings.push(o);
+  let order = 0;
+  snap.stops.forEach(([ref, off]) => {
+    const at = startsAt + off * 6e4;
+    if (ref.startsWith('ev:')) { const e = eventById(ref.slice(3)); if (e) S().stops.push({ id: uid('s'), outingId: o.id, venueId: e.venueId || null, eventId: e.id, order: order++, at }); }
+    else if (venueById[ref]) S().stops.push({ id: uid('s'), outingId: o.id, venueId: ref, order: order++, at });
+  });
+  S().attendees.push({ id: uid('a'), outingId: o.id, userId: hostId, rsvp: 'going', role: 'organiser', invitedBy: hostId, respondedAt: t, shareLocation: false });
+  (snap.m || []).forEach(([userId, rsvp]) => { if (userById[userId] && userId !== meId && userId !== hostId) S().attendees.push({ id: uid('a'), outingId: o.id, userId, rsvp, role: 'guest', invitedBy: hostId, respondedAt: t, shareLocation: false }); });
+  S().attendees.push({ id: uid('a'), outingId: o.id, userId: meId, rsvp: 'invited', role: 'guest', invitedBy: hostId, respondedAt: null, shareLocation: false });
+  commit('outing:import', { id: o.id });
   return o;
 }
 export function updateOuting(id: string, patch: Partial<Outing>) {

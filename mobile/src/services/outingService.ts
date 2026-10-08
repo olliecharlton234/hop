@@ -29,5 +29,4 @@ export const outingService = {
   advance: R.advance,
   end: R.endOuting,
   duplicate: R.duplicate,
-  inviteUrl: (o: { inviteCode: string }) => `https://hop.app/i/${o.inviteCode}`,
 };

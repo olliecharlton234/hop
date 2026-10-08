@@ -1,11 +1,16 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { C, F } from '@/theme';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Seg } from '@/components/ui/Seg';
-import { Empty, Section } from '@/components/ui/Layout';
+import { Empty, Row, Section } from '@/components/ui/Layout';
+import { Icon } from '@/components/ui/Icon';
+import { openInstallHelp } from '@/components/onboarding/InstallTip';
+import { useInstallable } from '@/utils/pwa';
+import { env } from '@/config/env';
+import { analytics } from '@/services/analytics';
 import { confirm } from '@/components/sheets/modals';
 import { MemoriesByYear } from '@/components/outings/OutingCard';
 import { useHop, deepEqual, resetStore } from '@/store/hopStore';
@@ -19,8 +24,20 @@ import { useLocation } from '@/hooks/useLocation';
 import { clock, now } from '@/utils/clock';
 import { plural } from '@/utils/format';
 
+/** Send feedback: the beta form if one is configured, otherwise email */
+function feedbackTarget() {
+  if (env.feedbackUrl) return env.feedbackUrl;
+  if (env.feedbackEmail) {
+    const body = `\n\n---\nHOP ${env.version} (${env.channel}) · ${Platform.OS}${Platform.OS === 'web' && typeof navigator !== 'undefined' ? ` · ${navigator.userAgent}` : ''}`;
+    return `mailto:${env.feedbackEmail}?subject=${encodeURIComponent('HOP beta feedback')}&body=${encodeURIComponent(body)}`;
+  }
+  return null;
+}
+
 export default function Profile() {
   const insets = useSafeAreaInsets();
+  const installable = useInstallable();
+  const feedback = feedbackTarget();
   const loc = useLocation();
   const preview = useUi((u) => u.previewHour);
   const d = useHop(() => {
@@ -47,8 +64,16 @@ export default function Profile() {
       ) : null}
       <Section title="Your outings">{d.memories.length ? <MemoriesByYear ids={d.memories} /> : <Empty>Nothing yet.</Empty>}</Section>
 
+      <Section title="HOP Beta" right={<Text style={st.tag}>EARLY ACCESS</Text>} testID="beta-section">
+        <Text style={[st.meta, { marginTop: 0, lineHeight: 19 }]}>You’re using an early version of HOP. Friends, city-wide activity, other people’s crowd reports and public venue photos are demo data, so nothing here is real people’s activity yet. Your plans, saves and photos stay on this device.</Text>
+        {feedback ? <Row testID="send-feedback" first lead={<Icon name="send" size={18} color={C.accent} />} title="Send feedback" sub="What worked, what didn’t, what’s missing" chevron
+          onPress={() => { analytics.track('feedback_opened'); Linking.openURL(feedback).catch(() => toast('Couldn’t open that link')); }} style={{ marginTop: 10 }} /> : null}
+        {installable ? <Row testID="install-row" first={!feedback} lead={<Icon name="plus" size={18} color={C.accent} />} title="Add HOP to your Home Screen" sub="Opens full screen, like an app" chevron onPress={openInstallHelp} /> : null}
+        <Text style={[st.meta, { fontSize: 12, color: C.text3, marginTop: 10 }]}>Version {env.version} · beta · {Platform.OS === 'web' ? 'web' : Platform.OS}</Text>
+      </Section>
+
       <View style={st.demo}>
-        <Text style={st.label}>PROTOTYPE · DEMO CONTROLS</Text>
+        <Text style={st.label}>BETA · DEMO CONTROLS</Text>
         <Text style={st.meta}>Viewing as</Text>
         <Seg value={d.meId} options={[['u_ollie', 'Ollie'], ['u_jack', 'Jack'], ['u_sarah', 'Sarah']]} onChange={(id) => { friendService.setMe(id); toast(`Viewing as ${friendService.user(id)?.first}`); }} />
         <Text style={st.meta}>Location</Text>
@@ -76,4 +101,5 @@ const st = StyleSheet.create({
   ps: { fontFamily: F.body, fontSize: 11.5, color: C.text2 },
   demo: { marginTop: 28, padding: 14, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: C.lineStrong, gap: 8 },
   label: { fontFamily: F.bodySemi, fontSize: 11, letterSpacing: 1, color: C.text3 },
+  tag: { fontFamily: F.monoSemi, fontSize: 10.5, letterSpacing: 1.2, color: C.accent, borderWidth: 1, borderColor: 'rgba(255,173,31,0.4)', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 },
 });

@@ -1,6 +1,7 @@
 /* The three faces of an outing: PLAN (before), LIVE (on the night), MEMORY (after),
    plus the shared Photos tab. Chat lives in components/chat. */
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
+import { analytics } from '@/services/analytics';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { C, F } from '@/theme';
 import { Avatar, AvatarStack } from '@/components/ui/Avatar';
@@ -49,7 +50,8 @@ export const OutingPlan = memo(function OutingPlan({ id }: { id: string }) {
     const o = outingService.get(id)!; const att = outingService.members(id);
     const stops = outingService.stops(id);
     return { title: o.title, icon: o.icon, cover: o.cover, when: when(o.startsAt), area: stops[0] ? outingService.placeOf(stops[0]).suburb : 'No stops yet', vis: o.visibility, org: outingService.isOrganiser(o), host: o.organiserId,
-      going: att.filter((a) => a.rsvp === 'going').map((a) => a.userId), maybe: att.filter((a) => a.rsvp === 'maybe').length, waiting: att.filter((a) => a.rsvp === 'invited').length, nStops: stops.length, activity: o.activity.slice(0, 6) };
+      going: att.filter((a) => a.rsvp === 'going').map((a) => a.userId), maybe: att.filter((a) => a.rsvp === 'maybe').length, waiting: att.filter((a) => a.rsvp === 'invited').length, nStops: stops.length, activity: o.activity.slice(0, 6),
+      invitee: !outingService.isOrganiser(o) && ['invited', undefined].includes(outingService.myMembership(id)?.rsvp) };
   }, [id], deepEqual);
   return (
     <View testID="outing-plan">
@@ -61,7 +63,16 @@ export const OutingPlan = memo(function OutingPlan({ id }: { id: string }) {
           <Text style={st.sub}>{d.area} · {d.vis === 'public' ? 'Public' : 'Private'} · {d.org ? 'You’re hosting' : `Hosted by ${friendService.user(d.host)?.first}`}</Text>
         </View>
       </View>
-      {!d.org ? <View style={{ marginTop: 14 }}><RsvpSeg id={id} /></View> : null}
+      {d.invitee ? (
+        <View style={st.join} testID="invite-landing">
+          <Text style={st.joinMeta}>{d.going.length} going · {plural(d.nStops, 'stop')}</Text>
+          <Button testID="join-outing" variant="primary" block title="Join outing" onPress={() => { outingService.rsvp(id, 'going'); toast('You’re in. The group chat is open.'); }} />
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 28, marginTop: 4 }}>
+            <LinkButton testID="join-maybe" title="Maybe" onPress={() => { outingService.rsvp(id, 'maybe'); toast('Marked as maybe'); }} />
+            <LinkButton testID="join-decline" title="Can’t make it" color={C.text3} onPress={() => { outingService.rsvp(id, 'declined'); toast('Let them know you can’t make it'); }} />
+          </View>
+        </View>
+      ) : !d.org ? <View style={{ marginTop: 14 }}><RsvpSeg id={id} /></View> : null}
       <Pressable testID="who-going" style={st.who} onPress={() => openAttendees(id)}>
         <AvatarStack users={d.going.map((u) => friendService.user(u))} max={6} size={30} />
         <View style={{ flex: 1 }}><Text style={st.b}>{d.going.length} {d.going.length === 1 ? 'person is' : 'people are'} going</Text><Text style={st.meta}>{[d.maybe && `${d.maybe} maybe`, d.waiting && `${d.waiting} haven’t replied`].filter(Boolean).join(' · ') || 'Everyone’s replied'}</Text></View>
@@ -157,6 +168,7 @@ export function endNight(id: string) {
 
 // ---------------------------------------------------------------- MEMORY
 export const MemoryPanel = memo(function MemoryPanel({ id }: { id: string }) {
+  useEffect(() => { analytics.track('memory_opened', { outing: id }); }, [id]);
   const d = useHop(() => {
     const o = outingService.get(id)!; const stops = outingService.stops(id);
     const people = outingService.going(id).map((a) => a.userId); const others = people.filter((u) => u !== friendService.meId());
@@ -227,6 +239,8 @@ export const PhotosTab = memo(function PhotosTab({ id }: { id: string }) {
 });
 
 const st = StyleSheet.create({
+  join: { marginTop: 16, gap: 10 },
+  joinMeta: { fontFamily: F.mono, fontSize: 13, color: C.text2 },
   ohead: { flexDirection: 'row', gap: 14, alignItems: 'center', paddingTop: 4 },
   emo: { width: 56, height: 56, borderRadius: 13, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.lineStrong, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   h1: { fontFamily: F.display, fontSize: 28, lineHeight: 31, color: C.text },

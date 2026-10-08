@@ -19,6 +19,8 @@ import { savedService } from '@/services/savedService';
 import { reportService } from '@/services/reportService';
 import { chatService } from '@/services/chatService';
 import { shareService } from '@/services/shareService';
+import { linkService } from '@/services/linkService';
+import { analytics } from '@/services/analytics';
 import { toast } from '@/services/notificationService';
 import { sim } from '@/data/demo/simulator';
 import { go } from '@/utils/nav';
@@ -138,7 +140,7 @@ function Share({ r }: { r: { venueId?: string; eventId?: string } }) {
   const native = async () => {
     const e = r.eventId ? eventService.byId(r.eventId) : null;
     const v = r.venueId ? venueService.byId(r.venueId) : null;
-    const url = e ? `https://hop.app/e/${e.id.replace('ev_', '')}` : `https://hop.app/v/${v!.id}`;
+    const url = e ? linkService.eventUrl(e.id) : linkService.venueUrl(v!.id);
     const msg = e ? `${e.title} — ${when(e.startsAt)} at ${eventService.placeOf(e)?.name}. Keen?` : `${v!.name}, ${v!.suburb}. Keen?`;
     modal.close();
     const res = await shareService.share({ title: what, message: msg, url });
@@ -184,10 +186,11 @@ function Invite({ id }: { id: string }) {
     return { title: o.title, icon: o.icon, when: when(o.startsAt), going: outingService.going(id).length, code: o.inviteCode, already,
       friends: friendService.byNights().sort((x, y) => Number(!!already[x.u.id]) - Number(!!already[y.u.id])).slice(0, 16).map(({ u, n }) => ({ id: u.id, n })) };
   }, [id], deepEqual);
-  const url = outingService.inviteUrl({ inviteCode: d.code });
+  const url = linkService.outingUrl(id);
   const shareLink = async () => {
     const stops = outingService.stops(id).map((s) => outingService.stopName(s));
     const res = await shareService.share({ title: d.title, message: `${d.title} — ${d.when}${stops.length ? ` · ${stops[0]}` : ''}. In or out?`, url });
+    if (res !== 'dismissed') analytics.track('invite_shared', { outing: id, via: res });
     if (res === 'copied') toast('Link copied. Paste it in the group chat.');
   };
   return (
@@ -196,11 +199,11 @@ function Invite({ id }: { id: string }) {
         onPress={() => { outingService.invite(id, sel); modal.close(); toast(`Invited ${sel.map((i) => friendService.user(i)?.first).slice(0, 3).join(', ')}${sel.length > 3 ? ` +${sel.length - 3}` : ''}`); }} />}>
       <View style={st.sharecard}>
         <View style={st.colic}><OutingIcon icon={d.icon} size={20} /></View>
-        <View style={{ flex: 1 }}><Text style={st.b}>{d.title}</Text><Text style={st.small}>{d.when} · {d.going} going</Text><Text style={[st.small, { color: C.accent, fontFamily: F.mono }]}>hop.app/i/{d.code}</Text></View>
+        <View style={{ flex: 1 }}><Text style={st.b}>{d.title}</Text><Text style={st.small}>{d.when} · {d.going} going</Text><Text numberOfLines={1} style={[st.small, { color: C.accent, fontFamily: F.mono }]}>{linkService.outingDisplay(id)}</Text></View>
       </View>
       <BtnRow style={{ marginTop: 10 }}>
         <Button testID="invite-share" title="Share link" icon="share" variant="primary" style={{ flex: 1 }} onPress={shareLink} />
-        <Button title="Copy" icon="link" style={{ flex: 1 }} onPress={async () => { await shareService.copy(url); toast('Link copied. Paste it in the group chat.'); }} />
+        <Button title="Copy" icon="link" style={{ flex: 1 }} onPress={async () => { await shareService.copy(url); analytics.track('invite_shared', { outing: id, via: 'copy' }); toast('Link copied. Paste it in the group chat.'); }} />
       </BtnRow>
       <Text style={[st.meta, { marginTop: 8 }]}>The link opens the plan and lets them reply Going, Maybe or Can’t go. Messages, WhatsApp, Messenger and Instagram all work through your phone’s share sheet.</Text>
       <Section title="People you go out with">

@@ -1,5 +1,7 @@
 /* App-level navigation actions, so components never hard-code routes. */
+import { Platform } from 'react-native';
 import { router } from 'expo-router';
+import { pickFromLibrary } from '@/components/camera/compose';
 import { panel, setUi, getUi } from '@/store/uiStore';
 import { outingService } from '@/services/outingService';
 
@@ -24,7 +26,11 @@ export const go = {
   },
   chat(id: string) { go.outing(id, 'chat'); },
   album(id: string) { router.push({ pathname: '/album/[id]', params: { id } }); },
-  camera(id: string) { router.push({ pathname: '/camera', params: { id } }); },
+  /** Native: HOP's camera. Web: the phone's own camera/photo picker (most reliable in Safari),
+      then the same preview → confirm → share-publicly flow. Must be called from the tap. */
+  camera(id: string) { if (Platform.OS === 'web') { pickFromLibrary(id); return; } router.push({ pathname: '/camera', params: { id } }); },
+  /** Back, or home when this screen was opened straight from a link */
+  back() { if (router.canGoBack()) router.back(); else router.replace('/'); },
   photo(params: { outing?: string; venue?: string; id: string }) { router.push({ pathname: '/photo', params: params as any }); },
   create(params: Record<string, string> = {}) { router.push({ pathname: '/outings/create', params: { fresh: '1', ...params } }); },
   pick(outingId: string) { setUi({ picking: outingId }); router.push({ pathname: '/outings/pick', params: { id: outingId } }); },

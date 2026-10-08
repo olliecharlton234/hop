@@ -5,6 +5,7 @@
 import { Platform } from 'react-native';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as R from '@/data/demo/repository';
+import { localPhotos } from './localPhotos';
 import type { Photo } from '@/types/models';
 
 async function shrink(uri: string, max: number, compress: number) {
@@ -15,9 +16,9 @@ async function shrink(uri: string, max: number, compress: number) {
   return out;
 }
 
-/** Copy into the app's document directory so photos survive cache clearing (native only) */
+/** Copy into the app's document directory so photos survive cache clearing (web: IndexedDB) */
 async function keep(uri: string, name: string) {
-  if (Platform.OS === 'web') return uri;
+  if (Platform.OS === 'web') return localPhotos.save(uri, name); // IndexedDB
   try {
     const { File, Directory, Paths } = await import('expo-file-system');
     const dir = new Directory(Paths.document, 'photos');
@@ -60,7 +61,13 @@ export const photoService = {
 
   /** Optional: also save to the camera roll (asks for write-only permission the first time) */
   async saveToCameraRoll(uri: string): Promise<boolean> {
-    if (Platform.OS === 'web') return false;
+    if (Platform.OS === 'web') { // web: download the file (iPhone: lands in Files; long-press a photo to save to Photos)
+      try {
+        const url = await localPhotos.resolve(uri); if (!url) return false;
+        const a = document.createElement('a'); a.href = url; a.download = `hop-${Date.now()}.jpg`; document.body.appendChild(a); a.click(); a.remove();
+        return true;
+      } catch { return false; }
+    }
     try {
       const ML = await import('expo-media-library/legacy');
       const perm = await ML.requestPermissionsAsync(true);

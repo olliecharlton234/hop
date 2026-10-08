@@ -2,7 +2,7 @@
    The route map stays on top; Plan / Chat / Photos tabs live in the sheet. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import { C, F } from '@/theme';
@@ -83,14 +83,14 @@ export default function OutingScreen() {
         <View style={[st.top, { top: insets.top + 10 }]} pointerEvents="box-none">
           {d.status === 'live' ? (
             <View style={st.livebar}>
-              <Pressable testID="outing-back" accessibilityLabel="Back" onPress={() => router.back()} style={st.lbBtn}><Icon name="back" /></Pressable>
+              <Pressable testID="outing-back" accessibilityLabel="Back" onPress={() => go.back()} style={st.lbBtn}><Icon name="back" /></Pressable>
               <View style={{ flex: 1, minWidth: 0 }}><LivePill /><Text numberOfLines={1} style={st.lbT}>{d.title}</Text></View>
               <Text style={st.clock}>{d.clock}</Text>
               <Pressable accessibilityLabel="Album" onPress={() => go.album(id)} style={st.lbBtn}><Icon name="memories" /></Pressable>
             </View>
           ) : (
             <View style={st.floatbar}>
-              <FloatButton testID="outing-back" label="Back" onPress={() => router.back()}><Icon name="back" /></FloatButton>
+              <FloatButton testID="outing-back" label="Back" onPress={() => go.back()}><Icon name="back" /></FloatButton>
               {d.status === 'ended' ? (d.photos ? <FloatButton label="Album" onPress={() => go.album(id)}><Icon name="memories" size={18} /><Text style={st.fbT}>Album</Text></FloatButton> : null)
                 : <FloatButton testID="top-invite" label={d.org ? 'Invite' : 'Share'} onPress={() => openInvite(id)}><Icon name="link" size={18} /><Text style={st.fbT}>{d.org ? 'Invite' : 'Share'}</Text></FloatButton>}
             </View>

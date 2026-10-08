@@ -1,7 +1,7 @@
 /* Full-screen photo viewer: swipe through an outing album or a venue's public photos.
    Your own photos: Just me / Shared with the outing, and Share publicly at the venue (opt-in). */
 import { useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from '@/theme';
@@ -40,8 +40,12 @@ export default function PhotoViewer() {
   }, [cur, outing, venue], deepEqual);
   const data = useMemo(() => ids, [ids]);
 
-  const share = async () => { if (!d) return; await shareService.share({ title: 'Photo', message: `${d.place} · on HOP`, url: photoSrc(d.p as any, 1600) }); };
-  const save = async () => { if (!d) return; const ok = await photoService.saveToCameraRoll(photoSrc(d.p as any, 2000)); toast(ok ? 'Saved to your camera roll' : 'Saving works for photos taken on this phone'); };
+  const share = async () => {
+    if (!d) return;
+    const r = await shareService.shareImage(photoSrc(d.p as any, 1600), `${d.place} · on HOP`);
+    if (r === 'unsupported') toast('This browser can’t share photos. Use Save instead.');
+  };
+  const save = async () => { if (!d) return; const ok = await photoService.saveToCameraRoll(photoSrc(d.p as any, 2000)); toast(ok ? (Platform.OS === 'web' ? 'Downloaded' : 'Saved to your camera roll') : 'Saving works for photos taken on this phone'); };
 
   return (
     <View style={st.root} testID="photo-viewer">

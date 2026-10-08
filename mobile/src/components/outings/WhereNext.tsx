@@ -1,7 +1,8 @@
 /* WHERE NEXT? — three nearby options during a live outing, ranked from distance, how busy it
    is now and later, events, friends there, saved places, chat "keen" votes and the route.
    Shown as plain options (not labelled AI): "6 min walk · Busy · 4 friends there". */
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
+import { analytics } from '@/services/analytics';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { C, F } from '@/theme';
 import { Section } from '@/components/ui/Layout';
@@ -72,6 +73,7 @@ export function voteWhereNext(outingId: string) {
 export const WhereNextSection = memo(function WhereNextSection({ outingId }: { outingId: string }) {
   const list = useHop(() => whereNext(outingId), [outingId], deepEqual);
   const org = useHop(() => outingService.isOrganiser(outingService.get(outingId)), [outingId]);
+  useEffect(() => { if (list.length) analytics.once(`wn:${outingId}`, 'where_next_opened', { outing: outingId, options: list.length }); }, [outingId, list.length]);
   if (!list.length) return null;
   return (
     <Section title="Where next?" testID="where-next">

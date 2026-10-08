@@ -1,7 +1,8 @@
 /* Adding photos: from the library (preview, who sees it, confirm) and the follow-up
    "Also share publicly at The Clock?" prompt. Keep with outing is always the default. */
 import { useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { pickImagesWeb } from './webPicker';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { C, F } from '@/theme';
@@ -17,6 +18,8 @@ import type { Photo } from '@/types/models';
 
 /** Ask for library access only now, when the user wants to add photos */
 export async function pickFromLibrary(outingId: string) {
+  // web: the browser's own picker (camera or library), opened inside the tap itself
+  if (Platform.OS === 'web') { pickImagesWeb().then((imgs) => { if (imgs.length) openCompose(outingId, imgs, 'upload'); }); return; }
   try {
     const perm = await ImagePicker.getMediaLibraryPermissionsAsync();
     if (!perm.granted && perm.canAskAgain === false) {

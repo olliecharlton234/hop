@@ -128,7 +128,7 @@ export const TonightPanel = memo(function TonightPanel() {
       <View>{peek}</View>
       {glance.length ? <Text style={st.glance}>{glance.join(' · ')}</Text> : null}
       {sections[ph]}
-      <Text style={st.src}>Busy levels combine venue patterns, public events, crowd reports and anonymous activity. Crowd reports, public photos and the wider city population are demo data in this prototype.</Text>
+      <Text style={st.src}>Busy levels combine venue patterns, public events, crowd reports and anonymous activity. Crowd reports, public photos and the wider city population are demo data in this beta.</Text>
     </View>
   );
 });

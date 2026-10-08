@@ -1,5 +1,6 @@
 /* Activity layer controls: the toggle (right), the key "ACTIVITY Quiet [ramp] Packed" and
    the time windows Now / Later tonight / Tomorrow / This weekend. Forecasts say so. */
+import { analytics } from '@/services/analytics';
 import { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -11,7 +12,7 @@ import { activityService } from '@/services/activityService';
 export const ActivityToggle = memo(function ActivityToggle() {
   const on = useUi((u) => u.heatOn);
   return (
-    <Pressable testID="activity-toggle" accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel="Activity layer" onPress={() => setUi({ heatOn: !on })} style={[st.toggle, on && { borderColor: 'rgba(255,173,31,0.55)' }]}>
+    <Pressable testID="activity-toggle" accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel="Activity layer" onPress={() => { if (!on) analytics.track('heatmap_enabled'); setUi({ heatOn: !on }); }} style={[st.toggle, on && { borderColor: 'rgba(255,173,31,0.55)' }]}>
       <Icon name="waves" size={20} color={on ? C.accent : C.text2} />
       <Text style={[st.toggleT, on && { color: C.accent }]}>Activity</Text>
     </Pressable>
